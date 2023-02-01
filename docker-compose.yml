@@ -1,0 +1,85 @@
+secrets:
+  cloudflare_api_token:
+      file: ${PWD}/secrets/cloudflare_api_token
+
+volumes:
+  portainer_data:
+
+networks:
+  proxy:
+
+services:
+  traefik:
+    container_name: traefik
+    image: "traefik:latest"
+    command:
+      - --api # Secure API
+      - --providers.docker # Tells Traefik to listen to docker
+      - --providers.docker.exposedbydefault=false # Do not add docker services by default, but using "traefik.enable=true"
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      # Let's encrypt with Cloudflare
+      - --certificatesresolvers.cloudflare.acme.email=${LE_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/acme.json
+      - --certificatesResolvers.cloudflare.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.cloudflare.acme.dnsChallenge.delayBeforeCheck=90
+      - --serverstransport.insecureskipverify=true # Disable check for valid HTTPS certificates of backend services
+      - --log.filePath=/var/log/traefik.log
+    restart: always
+    # healthcheck:
+    #   test: traefik healthcheck --ping
+    #   interval: 300s
+    #   timeout: 30s
+    #   retries: 3
+    #   start_period: 30s
+    networks:
+      - proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${PWD}/traefik/acme.json:/acme.json
+      - ${PWD}/traefik/traefik.log:/var/log/traefik.log
+    secrets:
+      - cloudflare_api_token
+    environment:
+      - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_api_token
+    labels:
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      # Dashboard
+      - traefik.enable=true
+      - traefik.http.routers.traefik.rule=Host(`traefik.${PROXY_DOMAIN}`)
+      - traefik.http.routers.traefik.service=api@internal
+      - traefik.http.routers.traefik.tls.certresolver=cloudflare
+      - traefik.http.routers.traefik.entrypoints=websecure
+
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ee:latest
+    command: -H unix:///var/run/docker.sock
+    restart: always
+    networks:
+      - proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    labels:
+      - "traefik.enable=true"
+      # Frontend
+      - "traefik.http.routers.frontend.rule=Host(`gui.${PROXY_DOMAIN}`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.services.frontend.loadbalancer.server.port=9000"
+      - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.routers.frontend.tls.certresolver=cloudflare"
+
+      # Edge
+      - "traefik.http.routers.edge.rule=Host(`edge.${PROXY_DOMAIN}`)"
+      - "traefik.http.routers.edge.entrypoints=websecure"
+      - "traefik.http.services.edge.loadbalancer.server.port=8000"
+      - "traefik.http.routers.edge.service=edge"
+      - "traefik.http.routers.edge.tls.certresolver=cloudflare"
