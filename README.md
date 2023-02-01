@@ -21,8 +21,8 @@ To generate a Cloudflare token with the right privileges:
 
 ## Setup and run
 
-1. Copy the file ```docker-compose.yml``` to your working directory.
-1. Create a file called ```.env``` (```touch ./.env```) and add a value for PROXY_DOMAIN and LE_EMAIL (see ```.env.example``` for details)
+1. Copy the file [```docker-compose.yml```](docker-compose.yml) to your working directory.
+1. Create a file called ```.env``` (e.g. ```touch ./.env```) and add a value for PROXY_DOMAIN and LE_EMAIL (see [```.env.example```](.env.example) for details)
 1. Create the directory and files for Traefik to run:
     ```shell
     mkdir -p ./traefik
@@ -41,4 +41,4 @@ To generate a Cloudflare token with the right privileges:
 1. Open your favorite browser, navigate to https://gui.PROXY_DOMAIN and follow the instructions to configure Portainer
 
 ## Portainer Community Edition
-If you would like to run the free community edition of Portainer, change ```portainer/portainer-ee``` on line 63 of ```docker-compose.yml``` to ```portainer/portainer-ce```.
+If you would like to run the free community edition of Portainer, change ```portainer/portainer-ee``` on line 63 of [```docker-compose.yml```](docker-compose.yml#L63) to ```portainer/portainer-ce```.
