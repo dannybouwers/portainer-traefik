@@ -11,7 +11,7 @@ networks:
 services:
   traefik:
     container_name: traefik
-    image: "traefik:latest"
+    image: traefik:v3.0.0
     command:
       - --api # Secure API
       - --providers.docker # Tells Traefik to listen to docker
@@ -26,17 +26,12 @@ services:
       - --serverstransport.insecureskipverify=true # Disable check for valid HTTPS certificates of backend services
       - --log.filePath=/var/log/traefik.log
     restart: always
-    # healthcheck:
-    #   test: traefik healthcheck --ping
-    #   interval: 300s
-    #   timeout: 30s
-    #   retries: 3
-    #   start_period: 30s
     networks:
       - proxy
     ports:
       - "80:80"
       - "443:443"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${PWD}/traefik/acme.json:/acme.json
@@ -46,7 +41,7 @@ services:
     environment:
       - CLOUDFLARE_DNS_API_TOKEN_FILE=/run/secrets/cloudflare_api_token
     labels:
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.rule=HostRegexp(`^.+$`)"
       - "traefik.http.routers.http-catchall.entrypoints=web"
       - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
@@ -60,7 +55,7 @@ services:
 
   portainer:
     container_name: portainer
-    image: portainer/portainer-ee:latest
+    image: portainer/portainer-ee:2.20.2
     command: -H unix:///var/run/docker.sock
     restart: always
     networks:
