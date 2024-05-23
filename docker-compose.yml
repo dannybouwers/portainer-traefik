@@ -55,7 +55,7 @@ services:
 
   portainer:
     container_name: portainer
-    image: portainer/portainer-ee:2.20.2
+    image: portainer/portainer-ee:2.20.3
     command: -H unix:///var/run/docker.sock
     restart: always
     networks:
